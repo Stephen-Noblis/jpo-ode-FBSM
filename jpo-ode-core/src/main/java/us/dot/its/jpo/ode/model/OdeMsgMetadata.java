@@ -57,6 +57,18 @@ public class OdeMsgMetadata extends OdeObject {
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private String asn1 = null;
 
+  /** ADDED CONTENT */
+
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private String asn1Full;   // full UDP datagram hex (1609.3/WSMP + 1609.2 + MessageFrame)
+
+  // getters/setters
+  public String getAsn1Full() { return asn1Full; }
+  public void setAsn1Full(String asn1Full) { this.asn1Full = asn1Full; }
+
+    /** ENDED ADDED CONTENT */
+
+
   public OdeMsgMetadata() {
     this(OdeMsgPayload.class.getName(), new SerialId(), DateTimeUtils.now());
   }

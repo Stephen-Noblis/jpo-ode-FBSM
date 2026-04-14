@@ -21,22 +21,6 @@ import us.dot.its.jpo.ode.util.JsonUtils;
 import us.dot.its.jpo.ode.util.XmlUtils;
 import us.dot.its.jpo.ode.util.XmlUtils.XmlUtilsException;
 
-/**
- * The Asn1DecodedDataRouter class is a component responsible for processing decoded ASN.1 data from
- * Kafka topics. It listens to messages on a specified Kafka topic and handles the incoming data by
- * processing and forwarding it to different topics based on specific criteria.
- *
- * <p>
- * This listener is specifically designed to handle decoded data produced by the asn1_codec. Upon
- * receiving a payload, it transforms the payload and then determines the appropriate Kafka topic to
- * forward the processed data.
- * </p>
- *
- * <p>
- * The class utilizes Spring Kafka's annotation-driven listener configuration, allowing it to
- * automatically consume messages from a configured Kafka topic.
- * </p>
- */
 @Slf4j
 @Component
 public class Asn1DecodedDataRouter {
@@ -45,35 +29,25 @@ public class Asn1DecodedDataRouter {
   private final KafkaTemplate<String, String> kafkaTemplate;
   private final XmlMapper simpleXmlMapper;
 
-  /**
-   * Exception for Asn1DecodedDataRouter specific failures.
-   */
   public static class Asn1DecodedDataRouterException extends Exception {
     public Asn1DecodedDataRouterException(String string) {
       super(string);
     }
   }
 
-  /**
-   * Constructs an instance of Asn1DecodedDataRouter.
-   *
-   * @param kafkaTemplate the KafkaTemplate used for sending messages to Kafka topics.
-   */
-  public Asn1DecodedDataRouter(KafkaTemplate<String, String> kafkaTemplate,
-      JsonTopics jsonTopics, @Qualifier("simpleXmlMapper") XmlMapper simpleXmlMapper) {
+  public Asn1DecodedDataRouter(
+      KafkaTemplate<String, String> kafkaTemplate,
+      JsonTopics jsonTopics,
+      @Qualifier("simpleXmlMapper") XmlMapper simpleXmlMapper) {
     this.kafkaTemplate = kafkaTemplate;
     this.jsonTopics = jsonTopics;
     this.simpleXmlMapper = simpleXmlMapper;
   }
 
-  /**
-   * Processes the given Kafka message payload by transforming it into ODE data and publishing it to
-   * appropriate Kafka topics based on its record type.
-   */
   @KafkaListener(id = "Asn1DecodedDataRouter", topics = "${ode.kafka.topics.asn1.decoder-output}")
   public void listen(ConsumerRecord<String, String> consumerRecord)
       throws XmlUtilsException, JsonProcessingException, Asn1DecodedDataRouterException,
-      JsonMappingException, JsonProcessingException, IOException {
+          JsonMappingException, IOException {
     log.debug("Key: {} payload: {}", consumerRecord.key(), consumerRecord.value());
 
     JSONObject consumed = XmlUtils.toJSONObject(consumerRecord.value())
@@ -84,7 +58,8 @@ public class Asn1DecodedDataRouter {
 
     if (payloadData.has("code")) {
       throw new Asn1DecodedDataRouterException(
-          String.format("Error processing decoded message with code %s and message %s",
+          String.format(
+              "Error processing decoded message with code %s and message %s",
               payloadData.getString("code"),
               payloadData.has("message") ? payloadData.getString("message") : "NULL"));
     }
@@ -111,13 +86,24 @@ public class Asn1DecodedDataRouter {
   private void routeMessageFrame(ConsumerRecord<String, String> consumerRecord, String... topics)
       throws XmlUtils.XmlUtilsException, IOException {
     log.debug("routeMessageFrame to topics: {}", String.join(", ", topics));
+
     OdeMessageFrameData odeMessageFrameData =
         OdeMessageFrameDataCreatorHelper.createOdeMessageFrameData(
-            consumerRecord.value(), 
+            consumerRecord.value(),
             simpleXmlMapper);
+
     String dataStr = JsonUtils.toJson(odeMessageFrameData, false);
     for (String topic : topics) {
       kafkaTemplate.send(topic, consumerRecord.key(), dataStr);
+    }
+
+    if (odeMessageFrameData.getMetadata() != null
+        && odeMessageFrameData.getMetadata().getIeee1609dot2DecodedJson() != null
+        && !odeMessageFrameData.getMetadata().getIeee1609dot2DecodedJson().isBlank()) {
+      kafkaTemplate.send(
+          "topic.OdeIeee1609Dot2Json",
+          consumerRecord.key(),
+          odeMessageFrameData.getMetadata().getIeee1609dot2DecodedJson());
     }
   }
 }

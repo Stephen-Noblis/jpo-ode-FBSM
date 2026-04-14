@@ -60,6 +60,7 @@ public class UdpHexDecoder {
     int lengthOfReceivedPacket = packet.getLength();
     int offsetOfReceivedPacket = packet.getOffset();
     byte[] payload = retrieveRelevantBytes(lengthOfReceivedPacket, buffer, offsetOfReceivedPacket);
+    String fullHex = HexUtils.toHexString(payload).toLowerCase();
 
     // convert bytes to hex string and verify identity
     String payloadHexString = HexUtils.toHexString(payload).toLowerCase();
@@ -250,9 +251,16 @@ public class UdpHexDecoder {
     int senderPort = packet.getPort();
     log.debug("Packet received from {}:{}", senderIp, senderPort);
 
-    // Create OdeMsgPayload and OdeLogMetadata objects and populate them
+    // NEW: capture the full UDP datagram bytes (pre-strip) as hex
+    byte[] rawBytes = retrieveRelevantBytes(packet.getLength(), packet.getData(), packet.getOffset());
+    String fullPacketHex = HexUtils.toHexString(rawBytes).toLowerCase();
+
+    // Existing behavior: getPayloadHexString() strips DOT3/WSMP header before decoding
     OdeAsn1Payload payload = getPayloadHexString(packet, messageType);
     OdeMessageFrameMetadata metadata = new OdeMessageFrameMetadata(payload);
+
+    // NEW: stash the original packet hex somewhere in metadata
+    metadata.setAsn1Full(fullPacketHex);   // <-- you add this field + setter in OdeMsgMetadata (or OdeMessageFrameMetadata)
 
     // Add header data for the decoding process
     metadata.setOdeReceivedAt(DateTimeUtils.now());
