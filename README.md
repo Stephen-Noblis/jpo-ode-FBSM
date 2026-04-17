@@ -2,7 +2,48 @@
 |---------------------|---------------------|
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=usdot.jpo.ode%3Ajpo-ode&metric=alert_status)](https://sonarcloud.io/dashboard?id=usdot.jpo.ode%3Ajpo-ode) | [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=usdot.jpo.ode%3Ajpo-ode&metric=coverage)](https://sonarcloud.io/dashboard?id=usdot.jpo.ode%3Ajpo-ode) |
 
-# jpo-ode
+### Integrated FaultyBSMGenerator and Misbehavior Reporting 
+
+#### Changes for Integration with FaultyBSMGenerator
+
+Prior version of the `jpo-ode` remove the header information form incoming messages. As these wrappers are necessary for processing BSMs in the FaultyBsmGenerator, modifications were made to manintain and publish these headers. Below, we list the necessary changes for compatibility:
+- **jpo-ode-svcs/src/main/java/us/dot/its/jpo/ode/udp/UdpHexDecoder.java**: set full asn1 decoding of message to `asn1Full` field inm metdata 
+- **jpo-ode-core/src/main/java/us/dot/its/jpo/ode/model/OdeMsgMetadata.java**: added ` getAsn1Full()` and `setAsn1Full()` for extracting complete asn1 of message. 
+- **jpo-ode-svcs/src/main/java/us/dot/its/jpo/ode/coder/OdeMessageFrameDataCreatorHelper.java**: in added support to convert ieeedot2data from XML to JSON format and set in the message metadata.
+- **jpo-ode-svcs/src/main/java/us/dot/its/jpo/ode/coder/OdeMessageFrameMetadata.java**: added metadata fields for ieeeDot2Data deocding: `ieee1609dot2DecodedXml`,`ieee1609dot2DecodeError`, and `ieee1609dot2DecodedJson`. 
+- **jpo-ode-svcs/src/main/java/us/dot/its/jpo/ode/kafka/listeners/asn1/Asn1DecodedDataRouter.java**: added support for publishing data to a new decoded ieeedot2data message to topic 
+
+- **asn1_codec/src/acm.cpp**: Added decode support for ieeedot2data message header to XML format and append to message metadata. Currently this decoding bypasses constraint checks.
+- **asn1_codec/include/acm.hpp**: modified decoder method header to accept `bool` for bypassing constraints (matching changes in `acm.cpp`). 
+- **run_acm.sh**:  modified broker broadcasting for development 
+
+
+#### Download and Setup 
+Clone with submodule recursion (download alongside JPO-ODE):
+```
+git clone --recursive <repository_URL>
+```
+To setup JPO-ODE for integration, either follow the setup instructions in their repo or conform to the following minimum steps for integration:
+1. **Clone and rename sample.env:** After cloning is finished, copy the `sample.env` file and replace the `DOCKER_HOST_IP` and `DOCKER_SHARED_VOLUMES` externals (found in /mbd-integrated/jpo-ode/sample.env) with the information below:
+```
+# (Required) The IP address of Docker host machine which can be found by running "ip -4 addr"
+# Hint: look for "inet addr:" within "eth0" or "en0" for OSX
+DOCKER_HOST_IP=<use hostname -I to add your IP>
+
+# (Required) The full path of a directory on the host machine to be shared with docker containers.
+# Hint: usually the path to the `jpo-ode` directory.
+DOCKER_SHARED_VOLUME=<path to your jpo-ode directory>
+```
+Rename this new file to `.env`
+
+2. **Clone and rename jpo-utils/sample.env:** After cloning is finished, repeat the previous steps for the jpo-ode/jpo-utils directory. If you fail to do this, decoding won't work! 
+
+
+3. Launch (from /mbd-integrated) with `docker compose   -f jpo-ode/docker-compose.yml   -f docker-compose.client.yml   up -d kafka kafka-setup ode bsm_client --build`. Requires ~2-3 GB of free space. 
+
+4. Test code by running mbd-integrated/jpo-ode/scripts/tests/udpsender_bsm.py and checking the ODE visualizer tool at [localhost](http://localhost:8080)
+
+
 
 **US Department of Transportation (USDOT) Intelligent Transportation Systems (ITS) Joint Program Office (JPO) Operational Data Environment (ODE)**
 
