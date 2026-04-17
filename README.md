@@ -17,32 +17,27 @@ Prior version of the `jpo-ode` remove the header information form incoming messa
 - **asn1_codec/include/acm.hpp**: modified decoder method header to accept `bool` for bypassing constraints (matching changes in `acm.cpp`). 
 - **run_acm.sh**:  modified broker broadcasting for development 
 
-
-#### Download and Setup 
-Clone with submodule recursion (download alongside JPO-ODE):
+#### Quick Setup for FBSM Integration 
+Clone the repository
 ```
 git clone --recursive <repository_URL>
 ```
-To setup JPO-ODE for integration, either follow the setup instructions in their repo or conform to the following minimum steps for integration:
-1. **Clone and rename sample.env:** After cloning is finished, copy the `sample.env` file and replace the `DOCKER_HOST_IP` and `DOCKER_SHARED_VOLUMES` externals (found in /mbd-integrated/jpo-ode/sample.env) with the information below:
+Next open the `.env` and modify the `DOCKER_HOST_IP` and `DOCKER_SHARED_VOLUME` variables with the server IP and path to the jpo-ode repostory:
 ```
 # (Required) The IP address of Docker host machine which can be found by running "ip -4 addr"
 # Hint: look for "inet addr:" within "eth0" or "en0" for OSX
-DOCKER_HOST_IP=<use hostname -I to add your IP>
+DOCKER_HOST_IP={SERVER_IP}
 
 # (Required) The full path of a directory on the host machine to be shared with docker containers.
 # Hint: usually the path to the `jpo-ode` directory.
-DOCKER_SHARED_VOLUME=<path to your jpo-ode directory>
+DOCKER_SHARED_VOLUME={PATH_TO_JPO_ODE_CONTENTS}
 ```
-Rename this new file to `.env`
+Also replace the `DOCKER_HOST_IP` in /jpo-utils/.env. 
 
-2. **Clone and rename jpo-utils/sample.env:** After cloning is finished, repeat the previous steps for the jpo-ode/jpo-utils directory. If you fail to do this, decoding won't work! 
-
-
-3. Launch (from /mbd-integrated) with `docker compose   -f jpo-ode/docker-compose.yml   -f docker-compose.client.yml   up -d kafka kafka-setup ode bsm_client --build`. Requires ~2-3 GB of free space. 
-
-4. Test code by running mbd-integrated/jpo-ode/scripts/tests/udpsender_bsm.py and checking the ODE visualizer tool at [localhost](http://localhost:8080)
-
+Then build the jpo-ode from the root director:
+```
+make start
+```
 
 
 **US Department of Transportation (USDOT) Intelligent Transportation Systems (ITS) Joint Program Office (JPO) Operational Data Environment (ODE)**
